@@ -1,36 +1,52 @@
-FROM lsiobase/xenial
+FROM lsiobase/alpine
 MAINTAINER phendryx
 
-# install packages
-RUN apt-get update && apt-get -y install \
-    build-essential \
-    gcc \
-    git \
-    libffi-dev \
-    libxml2 \
-    libxml2-dev \
-    libxslt1-dev \
-    nginx \
-    nodejs \
-    nodejs-legacy \
-    npm \
-    ruby \
-    ruby-dev \
-    ruby-full \
-    zlib1g \
-    zlib1g-dev \
-    zlibc
+RUN \
+# install runtime packages
+ apk add --no-cache \
+	ca-certificates \
+	curl \
+	libffi \
+	libxml2 \
+	libxslt \
+	nginx \
+	nodejs \
+	openssl \
+	ruby \
+	zlib && \
 
-# dirty hack below, installing phantomjs via npm. The phantomjs build for ubuntu 16.04,
-# as of 2016-10-08, does not work headless, which defeats the purpose of phantomjs.
+# install build packages
+ apk add --no-cache --virtual=build-dependencies \
+	autoconf \
+	automake \
+	g++ \
+	gcc \
+	git \
+	libffi-dev \
+	libxml2-dev \
+	libxslt-dev \
+	make \
+	ruby-bundler \
+	ruby-dev \
+	zlib-dev && \
+
+# installing phantomjs via npm.
+ npm -g install \
+	phantomjs-prebuilt && \
 
 # install github-dockerhub-sync
-RUN npm -g install phantomjs-prebuilt \
-    && echo 'gem: --no-document' > /etc/gemrc \
-    && git clone https://github.com/phendryx/github-dockerhub-sync.git /opt/github-dockerhub-sync/ \
-    && cd /opt/github-dockerhub-sync \
-    && gem install bundler \
-    && bundle install
+ echo 'gem: --no-document' > \
+	/etc/gemrc && \
+ git clone https://github.com/phendryx/github-dockerhub-sync.git \
+	/opt/github-dockerhub-sync/ && \
+ cd /opt/github-dockerhub-sync && \
+ gem install bundler && \
+ bundle install && \
+
+# clean up
+ apk del --purge \
+	build-dependencies && \
+ find /root -name . -o -prune -exec rm -rf -- {} +
 
 # add local files
 COPY root/ /
